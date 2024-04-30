@@ -12,7 +12,7 @@ public class IAEnemy : MonoBehaviour
     public NavMeshAgent agent;
     public int VidaPLayer;
     public int minVidaPlayer;
-    public GameObject ObjetoPrueba;
+    //public GameObject ObjetoPrueba;
   //private Transform jugadorTransform;
     public float vida;
     public int balas;
