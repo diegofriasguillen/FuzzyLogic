@@ -13,7 +13,6 @@ public class IAEnemy : MonoBehaviour
     public int VidaPLayer;
     public int minVidaPlayer;
     //public GameObject ObjetoPrueba;
-  //private Transform jugadorTransform;
     public float vida;
     public int balas;
     public float minArmor;
@@ -40,7 +39,6 @@ public class IAEnemy : MonoBehaviour
         }
     }
 
-    // Update is called once per frame
     void Update()
     {
         switch (prueba)
