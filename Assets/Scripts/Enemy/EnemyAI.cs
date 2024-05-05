@@ -1,105 +1,220 @@
+using System.Collections;
 using UnityEngine;
 using UnityEngine.AI;
+using UnityEngine.SceneManagement;
 
 public class EnemyAI : MonoBehaviour
 {
-    public Transform player; // Referencia al jugador
-    public GameObject bulletPrefab; // Prefab de la bala
-    public Transform bulletSpawnPoint; // Punto de salida de la bala
-    public Transform healStation; // Estación de curación
-    public Transform reloadStation; // Estación de recarga de balas
-    public int maxBullets = 8; // Cantidad máxima de balas
-    public float shootingRange = 10f; // Rango de disparo
-    public float shootInterval = 1f; // Intervalo de tiempo entre disparos
-    public float bulletSpeed = 10f; // Velocidad de la bala
-
-    // Variable pública para la cantidad actual de balas
-    public int currentBullets;
+    public Transform player;
+    public GameObject healthStation;
+    public GameObject ammoStation;
 
     private NavMeshAgent agent;
+
+    //bullets
+    private int maxAmmo = 8;
+    public int currentAmmo;
+    private bool canShoot = true;
+    private float shootCooldown = 1.5f;
+    private float reloadTime = 3.5f;
+    private float shootRange = 10f;
+    public GameObject bulletPrefab;
+    public Transform shootPoint;
+    private float bulletSpeed = 10f;
+
+    //health
+    private int maxHealth = 100;
+    public int currentHealth;
+
+    //panel 
+    public GameObject endPanel;
+
     private bool isReloading = false;
     private bool isHealing = false;
 
     private void Start()
     {
         agent = GetComponent<NavMeshAgent>();
-        currentBullets = maxBullets; // Inicializar la cantidad de balas
-        InvokeRepeating("Shoot", 0f, shootInterval); // Disparar cada cierto intervalo
+        currentAmmo = maxAmmo;
+        currentHealth = maxHealth;
     }
 
     private void Update()
     {
-        // Si el jugador está dentro del rango de disparo
-        if (Vector3.Distance(transform.position, player.position) <= shootingRange)
+        MakeDecision();
+        if (!isReloading && !isHealing && currentAmmo > 0 && Vector3.Distance(transform.position, player.position) <= shootRange)
         {
-            agent.SetDestination(transform.position); // Detenerse
-            transform.LookAt(player); // Apuntar al jugador
+            ShootAtPlayer();
         }
-        else if (!isReloading && currentBullets <= 0)
+    }
+
+    //movPOS
+    private void MakeDecision()
+    {
+        if (IsLowHealth() && !isHealing)
         {
-            // Si no está recargando y se queda sin balas, ir a recargar
-            agent.SetDestination(reloadStation.position);
+            MoveToHealthStation();
         }
-        else if (!isReloading && Vector3.Distance(transform.position, reloadStation.position) <= 1f)
+        else if (IsOutOfAmmo() && !IsLowHealth() && !isReloading)
         {
-            // Si no está recargando y está cerca de la estación de recarga, ir a recargar
-            agent.SetDestination(reloadStation.position);
-        }
-        else if (!isHealing && Vector3.Distance(transform.position, healStation.position) <= 1f)
-        {
-            // Si no está curándose y está cerca de la estación de curación, ir a curarse
-            agent.SetDestination(healStation.position);
+            MoveToAmmoStation();
         }
         else
         {
-            // Si no está haciendo ninguna acción, seguir al jugador
-            agent.SetDestination(player.position);
+            float distanceToPlayer = Vector3.Distance(transform.position, player.position);
+            if (!isReloading && !isHealing && distanceToPlayer > shootRange && currentAmmo > 0)
+            {
+                agent.SetDestination(player.position);
+            }
+            else
+            {
+                agent.SetDestination(transform.position);
+            }
         }
     }
 
-    private void Shoot()
+    private void ShootAtPlayer()
     {
-        // Disparar si el jugador está dentro del rango de disparo y tiene balas
-        if (currentBullets > 0 && Vector3.Distance(transform.position, player.position) <= shootingRange)
+        if (canShoot && currentAmmo > 0)
         {
-            GameObject bullet = Instantiate(bulletPrefab, bulletSpawnPoint.position, Quaternion.identity);
+            GameObject bullet = Instantiate(bulletPrefab, shootPoint.position, Quaternion.identity);
+
+            Vector3 direction = (player.position - shootPoint.position).normalized;
+
             Rigidbody bulletRigidbody = bullet.GetComponent<Rigidbody>();
-            bulletRigidbody.velocity = transform.forward * bulletSpeed;
+            if (bulletRigidbody != null)
+            {
+                bulletRigidbody.velocity = direction * bulletSpeed;
+            }
 
-            Destroy(bullet, 3f); // Destruir la bala después de 3 segundos si no ha impactado
-            currentBullets--; // Reducir la cantidad de balas
+            Destroy(bullet, 3f);
+
+            currentAmmo--;
+
+            StartCoroutine(ShootCooldown());
         }
     }
 
-    private void OnCollisionEnter(Collision collision)
+    private bool IsLowHealth()
     {
-        // Si colisiona con el lugar de curación, empezar a curarse
-        if (collision.gameObject.CompareTag("Health"))
-        {
-            isHealing = true;
-            // Aquí podrías agregar la lógica para la curación
-        }
+        return currentHealth <= 40;
+    }
 
-        // Si colisiona con el lugar de recarga, empezar a recargar
-        if (collision.gameObject.CompareTag("Ammo"))
+    private bool IsOutOfAmmo()
+    {
+        return currentAmmo <= 0;
+    }
+
+    //movLife
+    private void MoveToHealthStation()
+    {
+        agent.SetDestination(healthStation.transform.position);
+        if (Vector3.Distance(transform.position, healthStation.transform.position) < 1f)
         {
-            isReloading = true;
-            currentBullets = maxBullets; // Recargar balas
+            StartCoroutine(HealOverTime());
         }
     }
 
-    private void OnCollisionExit(Collision collision)
+    //movAMMO
+    private void MoveToAmmoStation()
     {
-        // Si deja de colisionar con el lugar de curación, dejar de curarse
-        if (collision.gameObject.CompareTag("Health"))
-        {
-            isHealing = false;
-        }
+        agent.SetDestination(ammoStation.transform.position);
+    }
 
-        // Si deja de colisionar con el lugar de recarga, dejar de recargar
-        if (collision.gameObject.CompareTag("Ammo"))
+    //bullets
+    private void RefillAmmo()
+    {
+        currentAmmo = maxAmmo;
+    }
+
+    //health
+    public void Heal()
+    {
+        currentHealth = maxHealth;
+    }
+
+    private System.Collections.IEnumerator ShootCooldown()
+    {
+        canShoot = false;
+        yield return new WaitForSeconds(shootCooldown);
+        canShoot = true;
+    }
+
+    private System.Collections.IEnumerator ReloadAmmo()
+    {
+        isReloading = true;
+
+        yield return new WaitForSeconds(reloadTime);
+
+        RefillAmmo();
+
+        isReloading = false;
+
+        agent.isStopped = false;
+    }
+
+    private void OnTriggerEnter(Collider other)
+    {
+        if (other.gameObject == ammoStation && IsOutOfAmmo() && !isReloading)
         {
-            isReloading = false;
+            agent.isStopped = true;
+            StartCoroutine(ReloadAmmo());
         }
+        else if (other.CompareTag("PlayerBullet"))
+        {
+            TakeDamage(20);
+            Destroy(other.gameObject);
+        }
+    }
+
+    public void TakeDamage(int damage)
+    {
+        currentHealth -= damage;
+        if (currentHealth <= 0)
+        {
+            Die();
+        }
+    }
+
+    private void Die()
+    {
+        Time.timeScale = 0f;
+        endPanel.SetActive(true);
+        Debug.Log("Game Over");
+    }
+
+    //panel
+    public void Restart()
+    {
+        StartCoroutine(RestartCoroutine());
+    }
+
+    private IEnumerator RestartCoroutine()
+    {
+        yield return new WaitForSecondsRealtime(0.1f);
+        Time.timeScale = 1f;
+        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+    }
+
+    public void InitialMenu()
+    {
+        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex - 1);
+    }
+
+    public void Quit()
+    {
+        Application.Quit();
+    }
+
+    private IEnumerator HealOverTime()
+    {
+        isHealing = true;
+        while (currentHealth < maxHealth)
+        {
+            yield return new WaitForSeconds(1f);
+            currentHealth += 20;
+            currentHealth = Mathf.Clamp(currentHealth, 0, maxHealth);
+        }
+        isHealing = false;
     }
 }

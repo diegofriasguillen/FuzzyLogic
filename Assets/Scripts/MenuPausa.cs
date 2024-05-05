@@ -21,8 +21,14 @@ public class MenuPausa : MonoBehaviour
         menuPausa.SetActive(false);
    }
 
-   public void Restart()
+    public void Restart()
     {
+        StartCoroutine(RestartCoroutine());
+    }
+
+    private IEnumerator RestartCoroutine()
+    {
+        yield return new WaitForSecondsRealtime(0.1f); 
         Time.timeScale = 1f;
         SceneManager.LoadScene(SceneManager.GetActiveScene().name);
     }
