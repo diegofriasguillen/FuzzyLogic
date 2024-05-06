@@ -11,16 +11,23 @@ public class EnemyAI : MonoBehaviour
 
     private NavMeshAgent agent;
 
+    // Variables para Fuzzy Logic
+    private float fuzzyPlayerHealth;
+    private float fuzzyAmmo;
+    private float fuzzyDistancePlayer;
+    private float fuzzyDistanceAmmo;
+    private float fuzzyDistanceHealth;
+
     //bullets
     private int maxAmmo = 8;
     public int currentAmmo;
     private bool canShoot = true;
     private float shootCooldown = 1.5f;
-    private float reloadTime = 3.5f;
-    private float shootRange = 10f;
+    private float shootRange = 8f;
     public GameObject bulletPrefab;
     public Transform shootPoint;
     private float bulletSpeed = 10f;
+    private float reloadTime = 3.5f;
 
     //health
     private int maxHealth = 100;
@@ -31,6 +38,10 @@ public class EnemyAI : MonoBehaviour
 
     private bool isReloading = false;
     private bool isHealing = false;
+    
+
+    //distance
+    private float desiredDistanceToPlayer = 8f;
 
     private void Start()
     {
@@ -41,6 +52,7 @@ public class EnemyAI : MonoBehaviour
 
     private void Update()
     {
+        Fuzzify();
         MakeDecision();
         if (!isReloading && !isHealing && currentAmmo > 0 && Vector3.Distance(transform.position, player.position) <= shootRange)
         {
@@ -48,31 +60,94 @@ public class EnemyAI : MonoBehaviour
         }
     }
 
-    //movPOS
-    private void MakeDecision()
+    // Lógica Fuzzy
+    private void Fuzzify()
     {
-        if (IsLowHealth() && !isHealing)
-        {
-            MoveToHealthStation();
-        }
-        else if (IsOutOfAmmo() && !IsLowHealth() && !isReloading)
-        {
-            MoveToAmmoStation();
-        }
-        else
-        {
-            float distanceToPlayer = Vector3.Distance(transform.position, player.position);
-            if (!isReloading && !isHealing && distanceToPlayer > shootRange && currentAmmo > 0)
-            {
-                agent.SetDestination(player.position);
-            }
-            else
-            {
-                agent.SetDestination(transform.position);
-            }
-        }
+        fuzzyPlayerHealth = (currentHealth * 100) / maxHealth;
+        fuzzyAmmo = (currentAmmo * 100) / maxAmmo;
+        fuzzyDistancePlayer = Vector3.Distance(transform.position, player.position);
+        fuzzyDistanceAmmo = Vector3.Distance(transform.position, ammoStation.transform.position);
+        fuzzyDistanceHealth = Vector3.Distance(transform.position, healthStation.transform.position);
     }
 
+    //fuzzylogic
+    private void MakeDecision()
+    {
+        float distanceToPlayer = Vector3.Distance(transform.position, player.position);
+
+        if (distanceToPlayer <= desiredDistanceToPlayer)
+        {
+            agent.SetDestination(transform.position);
+            return;
+        }
+
+        //runbitchruuuun
+        if (fuzzyPlayerHealth <= 30 && distanceToPlayer < 10)
+        {
+            Flee();
+            return;
+        }
+        if (fuzzyPlayerHealth <= 30 && distanceToPlayer > 10)
+        {
+            MoveToHealthStation();
+            return;
+        }
+
+        if (fuzzyPlayerHealth <= 20 && fuzzyDistanceHealth > 11)
+        {
+            Flee();
+            return;
+        }
+
+        //healling
+        if (fuzzyPlayerHealth <= 40 && fuzzyDistanceHealth <= 10)
+        {
+            MoveToHealthStation();
+            return;
+        }
+        if (fuzzyPlayerHealth <= 40 && distanceToPlayer > 10)
+        {
+        MoveToHealthStation();
+        return;
+        }
+
+        //reload
+
+        if (fuzzyAmmo <= 40 && fuzzyDistanceAmmo <= 15)
+        {
+            MoveToAmmoStation();
+            return;
+        }
+
+        if (fuzzyAmmo <= 40 && fuzzyDistancePlayer < 8 && fuzzyDistanceAmmo > 10)
+        {
+            Flee();
+            return;
+        }
+
+        else if (fuzzyAmmo <= 40 && fuzzyDistancePlayer > 8)
+        {
+            MoveToAmmoStation();
+            return;
+        }
+
+
+        else
+        {
+            agent.SetDestination(player.position);
+          }
+       
+
+    }
+
+    private void Flee()
+    {
+        Vector3 fleeDirection = transform.position - player.position;
+        fleeDirection.y = 0;
+        fleeDirection.Normalize();
+        Vector3 fleePoint = transform.position + fleeDirection * 8f;
+        agent.SetDestination(fleePoint);
+    }
     private void ShootAtPlayer()
     {
         if (canShoot && currentAmmo > 0)
@@ -95,15 +170,6 @@ public class EnemyAI : MonoBehaviour
         }
     }
 
-    private bool IsLowHealth()
-    {
-        return currentHealth <= 40;
-    }
-
-    private bool IsOutOfAmmo()
-    {
-        return currentAmmo <= 0;
-    }
 
     //movLife
     private void MoveToHealthStation()
@@ -155,7 +221,7 @@ public class EnemyAI : MonoBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
-        if (other.gameObject == ammoStation && IsOutOfAmmo() && !isReloading)
+        if (other.gameObject == ammoStation && !isReloading)
         {
             agent.isStopped = true;
             StartCoroutine(ReloadAmmo());
