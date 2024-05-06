@@ -1,6 +1,7 @@
 using System.Collections;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using TMPro;
 
 public class Movement : MonoBehaviour
 {
@@ -20,6 +21,9 @@ public class Movement : MonoBehaviour
     //die
     public GameObject endPanel;
 
+    //life
+    public TMP_Text textoVida;
+
     private void Start()
     {
         rb = GetComponent<Rigidbody>();
@@ -30,6 +34,7 @@ public class Movement : MonoBehaviour
     private void Update()
     {
         Move();
+        textoVida.text = "Your life: " + currentHealth.ToString();
         Shoot();
         Reload();
     }

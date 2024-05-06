@@ -2,6 +2,7 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.AI;
 using UnityEngine.SceneManagement;
+using TMPro;
 
 public class EnemyAI : MonoBehaviour
 {
@@ -43,6 +44,8 @@ public class EnemyAI : MonoBehaviour
     //distance
     private float desiredDistanceToPlayer = 8f;
 
+    //text
+    public TMP_Text textoVida;
     private void Start()
     {
         agent = GetComponent<NavMeshAgent>();
@@ -53,6 +56,7 @@ public class EnemyAI : MonoBehaviour
     private void Update()
     {
         Fuzzify();
+        textoVida.text = "Enemy Life: " + fuzzyPlayerHealth.ToString();
         MakeDecision();
         if (!isReloading && !isHealing && currentAmmo > 0 && Vector3.Distance(transform.position, player.position) <= shootRange)
         {
