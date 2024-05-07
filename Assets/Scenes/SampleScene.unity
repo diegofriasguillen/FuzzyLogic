@@ -5514,7 +5514,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   rb: {fileID: 2017581493}
-  moveSpeed: 12
+  moveSpeed: 4
   maxHealth: 100
   currentHealth: 0
   bulletPrefab: {fileID: 3670028616985828339, guid: db5b0d891fa16e4418e70848ba92206f,
