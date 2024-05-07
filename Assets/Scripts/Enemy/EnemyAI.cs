@@ -12,7 +12,7 @@ public class EnemyAI : MonoBehaviour
 
     private NavMeshAgent agent;
 
-    // Variables para Fuzzy Logic
+    //fuzzy
     private float fuzzyPlayerHealth;
     private float fuzzyAmmo;
     private float fuzzyDistancePlayer;
@@ -64,7 +64,7 @@ public class EnemyAI : MonoBehaviour
         }
     }
 
-    // Lógica Fuzzy
+    //fuzzylogic
     private void Fuzzify()
     {
         fuzzyPlayerHealth = (currentHealth * 100) / maxHealth;
@@ -74,7 +74,7 @@ public class EnemyAI : MonoBehaviour
         fuzzyDistanceHealth = Vector3.Distance(transform.position, healthStation.transform.position);
     }
 
-    //fuzzylogic
+    
     private void MakeDecision()
     {
         float distanceToPlayer = Vector3.Distance(transform.position, player.position);
@@ -87,6 +87,11 @@ public class EnemyAI : MonoBehaviour
 
         //runbitchruuuun
         if (fuzzyPlayerHealth <= 30 && distanceToPlayer < 10)
+        {
+            Flee();
+            return;
+        }
+        if (fuzzyAmmo <= 30 && distanceToPlayer < 10)
         {
             Flee();
             return;
@@ -122,20 +127,6 @@ public class EnemyAI : MonoBehaviour
             MoveToAmmoStation();
             return;
         }
-
-        if (fuzzyAmmo <= 40 && fuzzyDistancePlayer < 8 && fuzzyDistanceAmmo > 10)
-        {
-            Flee();
-            return;
-        }
-
-        else if (fuzzyAmmo <= 40 && fuzzyDistancePlayer > 8)
-        {
-            MoveToAmmoStation();
-            return;
-        }
-
-
         else
         {
             agent.SetDestination(player.position);
